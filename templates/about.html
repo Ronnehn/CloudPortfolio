@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}About · {{ profile.name }}{% endblock %}
+{% block content %}
+<div class="wrap">
+  <section class="about-head">
+    {% if profile.photo_id %}<img class="avatar lg" src="/files/{{ profile.photo_id }}" alt="{{ profile.name }}">
+    {% else %}<div class="avatar lg">{{ (profile.name or '?')[0] }}</div>{% endif %}
+    <div>
+      <div class="eyebrow">About me</div>
+      <h1 style="margin-bottom:.1em">{{ profile.name }}</h1>
+      <p class="lead" style="color:var(--muted);margin:0">{{ profile.headline }}{% if profile.location %} · {{ profile.location }}{% endif %}</p>
+    </div>
+  </section>
+
+  <img class="banner-img" src="/static/banner.png" alt="{{ profile.name }}: {{ profile.headline }}" style="margin:0 0 36px">
+
+  <div class="two-col">
+    <div>
+      <div class="prose">{{ profile.about_md|md }}</div>
+      {% if profile.resume_id %}
+      <h2 style="margin-top:40px">Resume</h2>
+      <iframe class="resume-frame" src="/resume" title="Resume"></iframe>
+      {% endif %}
+    </div>
+    <aside>
+      {% if profile.resume_id or profile.email or profile.linkedin or profile.github %}
+      <div class="side-card">
+        <h3>Get in touch</h3>
+        <div class="btns" style="flex-direction:column">
+          {% if profile.resume_id %}<a class="btn primary" href="/resume" target="_blank" rel="noopener">📄 Download resume</a>{% endif %}
+          {% if profile.email %}<a class="btn" href="mailto:{{ profile.email }}">✉ {{ profile.email }}</a>{% endif %}
+          {% if profile.linkedin %}<a class="btn" href="{{ profile.linkedin }}" target="_blank" rel="noopener">LinkedIn</a>{% endif %}
+          {% if profile.github %}<a class="btn" href="{{ profile.github }}" target="_blank" rel="noopener">GitHub</a>{% endif %}
+        </div>
+      </div>
+      {% endif %}
+      {% if profile.skills %}
+      <div class="side-card"><h3>Skills &amp; tools</h3>
+        <div class="chips" style="margin:0">{% for s in profile.skills|tags %}<span class="chip small">{{ s }}</span>{% endfor %}</div></div>
+      {% endif %}
+      {% if profile.certifications %}
+      <div class="side-card"><h3>Certifications</h3>
+        <ul class="goals">{% for c in profile.certifications|lines %}<li>{{ c }}</li>{% endfor %}</ul></div>
+      {% endif %}
+    </aside>
+  </div>
+</div>
+{% endblock %}

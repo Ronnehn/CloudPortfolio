@@ -1,0 +1,23 @@
+# Render Blueprint: adds the portfolio as a second web service next to Tooltrick.
+# Render dashboard → New → Blueprint → pick this repo.
+services:
+  - type: web
+    name: aws-portfolio
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT --proxy-headers --forwarded-allow-ips="*"
+    healthCheckPath: /healthz
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.7"
+      - key: SECRET_KEY
+        generateValue: true        # signs the login cookie
+      - key: ADMIN_USERNAME
+        value: admin
+      - key: ADMIN_PASSWORD
+        sync: false                # you type this in the dashboard
+      - key: TURSO_DATABASE_URL
+        sync: false                # libsql://<db>-<org>.turso.io
+      - key: TURSO_AUTH_TOKEN
+        sync: false

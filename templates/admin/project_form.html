@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Edit' if p.id else 'New' }} project · {{ profile.name }}{% endblock %}
+{% block content %}
+<div class="wrap admin narrow" style="max-width:900px">
+  <a href="/admin" style="color:var(--muted)">← Dashboard</a>
+  <h1 style="font-size:2.2rem">{{ 'Edit: ' ~ p.title if p.id else 'New project' }}</h1>
+  {% if request.query_params.get('saved') %}<p class="notice">Saved. <a href="/projects/{{ p.slug }}">View page →</a></p>{% endif %}
+
+  <details class="panel" style="margin-bottom:18px" {% if not p.id %}open{% endif %}>
+    <summary style="cursor:pointer;font-weight:600">⚡ Quick fill from a LinkedIn post (optional)</summary>
+    <p class="hint" style="color:var(--muted)">Paste a post like your project announcement. It fills the hook, demo link, tags, applications (from “Name: description” bullets) and “What I learned”. You can tweak everything afterwards.</p>
+    <textarea id="import-text" class="code" rows="8" placeholder="Paste the post text here…"></textarea>
+    <div class="btns"><button type="button" class="btn" id="import-btn">Fill the template</button></div>
+  </details>
+
+  <form class="form" method="post" action="/admin/projects/save" enctype="multipart/form-data" id="pform">
+    <input type="hidden" name="id" value="{{ p.id or '' }}">
+    <input type="hidden" name="steps_json" id="steps_json">
+
+    <div class="panel">
+      <h2><span class="num">00</span>Title &amp; hook</h2>
+      <div class="field"><label>Project title</label><input type="text" name="title" value="{{ p.title or '' }}" required placeholder="Historical Stock Market Analyzer on Amazon EKS"></div>
+      <div class="field"><label>Hook</label><span class="hint">One or two sentences that make people click. Shown on the card and at the top of the page.</span>
+        <textarea name="hook" rows="3" placeholder="A data-science app deployed on Amazon EKS with a secure, auto-scaling 3-tier architecture.">{{ p.hook or '' }}</textarea></div>
+      <div class="cols-2">
+        <div class="field"><label>Tags</label><span class="hint">Comma separated, used for the filter: AWS, EKS, Docker</span>
+          <input type="text" name="tags" value="{{ p.tags or '' }}"></div>
+        <div class="field"><label>URL slug</label><span class="hint">Leave empty to generate from the title</span>
+          <input type="text" name="slug" value="{{ p.slug or '' }}"></div>
+      </div>
+      <div class="field"><label>Cover image</label><span class="hint">Optional. Shown on the project card.</span>
+        {% if p.cover_id %}<img src="/files/{{ p.cover_id }}" style="max-height:120px;border-radius:8px"><label class="check"><input type="checkbox" name="remove_cover"> Remove cover</label>{% endif %}
+        <input type="file" name="cover" accept="image/*"></div>
+    </div>
+
+    <div class="panel">
+      <h2><span class="num">01</span>Objective</h2>
+      <div class="field"><span class="hint">What problem does it solve and why did you build it? Markdown works (**bold**, lists, `code`).</span>
+        <textarea name="objective" rows="5">{{ p.objective or '' }}</textarea></div>
+    </div>
+
+    <div class="panel">
+      <h2><span class="num">02</span>Project goals</h2>
+      <div class="field"><span class="hint">One goal per line.</span>
+        <textarea name="goals" rows="5" placeholder="High availability across multiple AZs&#10;Secrets never stored in code&#10;Zero-downtime deployments">{{ p.goals or '' }}</textarea></div>
+    </div>
+
+    <div class="panel">
+      <h2><span class="num">03</span>Applications used</h2>
+      <div class="field"><span class="hint">One per line, as <code>Service | what you used it for</code></span>
+        <textarea name="applications" rows="6" class="code" placeholder="Amazon EKS | Managed Kubernetes with auto-scaling worker nodes&#10;Amazon RDS (MySQL) | Application database&#10;AWS Secrets Manager | Database credentials&#10;Amazon ECR | Docker image registry">{{ p.applications or '' }}</textarea></div>
+    </div>
+
+    <div class="panel">
+      <h2><span class="num">04</span>Architecture &amp; diagrams</h2>
+      {% for d in diagrams %}
+      <div class="diagram-edit">
+        <img src="/files/{{ d.file_id }}" alt="">
+        <div>
+          <div class="field"><label>Caption</label><input type="text" name="diagram_caption_{{ d.id }}" value="{{ d.caption or '' }}"></div>
+          <div class="cols-2">
+            <div class="field"><label>Order</label><input type="number" name="diagram_pos_{{ d.id }}" value="{{ d.position }}"></div>
+            <label class="check"><input type="checkbox" name="diagram_delete_{{ d.id }}"> Delete this diagram</label>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+      <div id="new-diagrams"></div>
+      <button type="button" class="btn sm" id="add-diagram">+ Add diagram image</button>
+      <div class="field" style="margin-top:18px"><label>Mermaid diagram (optional)</label>
+        <span class="hint">Draw a diagram as text instead of uploading an image. <a href="https://mermaid.live" target="_blank" rel="noopener">Try it at mermaid.live</a></span>
+        <textarea name="mermaid" rows="6" class="code" placeholder="flowchart LR&#10;  User --> ALB[Load Balancer] --> EKS[EKS pods] --> RDS[(RDS MySQL)]">{{ p.mermaid or '' }}</textarea></div>
+    </div>
+
+    <div class="panel">
+      <h2><span class="num">05</span>Steps</h2>
+      <p class="hint" style="color:var(--muted);margin-top:0">How you built it, in order. Markdown works in the description, including code blocks.</p>
+      <div id="steps"></div>
+      <button type="button" class="btn sm" id="add-step">+ Add step</button>
+    </div>
+
+    <div class="panel">
+      <h2><span class="num">06</span>Demo, repo &amp; lessons</h2>
+      <div class="cols-2">
+        <div class="field"><label>Demo video URL</label><span class="hint">YouTube, Vimeo and Loom are embedded; other links get a button.</span>
+          <input type="url" name="video_url" value="{{ p.video_url or '' }}"></div>
+        <div class="field"><label>GitHub repo URL</label><span class="hint">&nbsp;</span>
+          <input type="url" name="github_url" value="{{ p.github_url or '' }}"></div>
+      </div>
+      <div class="field"><label>What I learned</label>
+        <textarea name="learned" rows="5">{{ p.learned or '' }}</textarea></div>
+    </div>
+
+    <div class="panel">
+      <h2>Publishing</h2>
+      <div class="cols-2">
+        <div>
+          <label class="check"><input type="checkbox" name="published" {% if p.published %}checked{% endif %}> Published (visible to everyone)</label>
+          <label class="check" style="margin-top:8px"><input type="checkbox" name="featured" {% if p.featured %}checked{% endif %}> ★ Featured on the homepage</label>
+        </div>
+        <div class="field"><label>Sort order</label><span class="hint">Lower numbers come first</span>
+          <input type="number" name="position" value="{{ p.position or 0 }}"></div>
+      </div>
+    </div>
+
+    <div class="savebar">
+      <button class="btn primary" type="submit" name="action" value="save">Save</button>
+      <button class="btn" type="submit" name="action" value="view">Save &amp; view page</button>
+      <a class="btn" href="/admin" style="margin-left:auto">Cancel</a>
+    </div>
+  </form>
+</div>
+
+<template id="step-tpl">
+  <div class="step-row">
+    <div class="n"></div>
+    <div>
+      <input type="text" class="s-title" placeholder="Step title, e.g. Create the 3-tier VPC" style="margin-bottom:8px">
+      <textarea class="s-body" rows="4" placeholder="What you did, commands, gotchas…"></textarea>
+    </div>
+    <div class="ctl">
+      <button type="button" class="btn sm" data-act="up" title="Move up">↑</button>
+      <button type="button" class="btn sm" data-act="down" title="Move down">↓</button>
+      <button type="button" class="btn sm danger" data-act="del" title="Remove">✕</button>
+    </div>
+  </div>
+</template>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const initialSteps = {{ steps|tojson }};
+const stepsEl = document.getElementById('steps');
+const tpl = document.getElementById('step-tpl');
+
+function renumber() { [...stepsEl.children].forEach((r, i) => r.querySelector('.n').textContent = i + 1); }
+function addStep(s = {}) {
+  const row = tpl.content.firstElementChild.cloneNode(true);
+  row.querySelector('.s-title').value = s.title || '';
+  row.querySelector('.s-body').value = s.body || '';
+  stepsEl.appendChild(row); renumber(); return row;
+}
+stepsEl.addEventListener('click', e => {
+  const b = e.target.closest('button[data-act]'); if (!b) return;
+  const row = b.closest('.step-row');
+  if (b.dataset.act === 'del') row.remove();
+  if (b.dataset.act === 'up' && row.previousElementSibling) stepsEl.insertBefore(row, row.previousElementSibling);
+  if (b.dataset.act === 'down' && row.nextElementSibling) stepsEl.insertBefore(row.nextElementSibling, row);
+  renumber();
+});
+document.getElementById('add-step').onclick = () => addStep().querySelector('.s-title').focus();
+(initialSteps.length ? initialSteps : [{}, {}, {}]).forEach(addStep);
+
+document.getElementById('pform').addEventListener('submit', () => {
+  document.getElementById('steps_json').value = JSON.stringify(
+    [...stepsEl.children].map(r => ({ title: r.querySelector('.s-title').value, body: r.querySelector('.s-body').value })));
+});
+
+document.getElementById('add-diagram').onclick = () => {
+  const d = document.createElement('div');
+  d.className = 'diagram-edit';
+  d.innerHTML = '<input type="file" name="new_diagrams" accept="image/*" required>' +
+    '<input type="text" name="new_diagram_captions" placeholder="Caption, e.g. 3-tier VPC across two AZs">';
+  document.getElementById('new-diagrams').appendChild(d);
+};
+
+// ---- quick fill from a LinkedIn-style post ----
+document.getElementById('import-btn').onclick = () => {
+  const text = document.getElementById('import-text').value.trim(); if (!text) return;
+  const f = document.getElementById('pform');
+  const set = (name, val) => { const el = f.elements[name]; if (el && val && !el.value.trim()) el.value = val; };
+  const paras = text.split(/\n\s*\n/).map(p => p.trim()).filter(Boolean);
+  set('hook', paras[0].replace(/^I('|’)m (excited|happy|proud|thrilled) to share my (latest|new) project,?\s*/i, '').replace(/^\w/, c => c.toUpperCase()));
+  const url = text.match(/https?:\/\/\S+/); set('video_url', url && url[0]);
+  const tags = [...text.matchAll(/#(\w+)/g)].map(m => m[1]); set('tags', tags.join(', '));
+  const apps = [], goals = [];
+  text.split('\n').forEach(line => {
+    const m = line.replace(/^[\s•\-*·]+/, '').match(/^([^:]{2,60}):\s*(.+)$/);
+    if (!m || /^https?/.test(m[2])) return;
+    (/(\bAmazon\b|\bAWS\b|Docker|Kubernetes|\bEKS\b|\bECR\b|\bRDS\b|GitHub|Terraform|Lambda|\bS3\b|kubectl|eksctl|Secrets|VPC|CloudFront|DynamoDB)/i.test(line) ? apps : goals)
+      .push(m[1].trim() + ' | ' + m[2].trim());
+  });
+  set('applications', apps.join('\n'));
+  set('goals', goals.map(g => g.split(' | ')[0] + ': ' + g.split(' | ')[1]).join('\n'));
+  const li = paras.findIndex(p => /what i('|’)?ve learned|what i learned|lessons/i.test(p));
+  if (li >= 0) set('learned', paras[li].replace(/^.*?(learned|lessons)[^\n:]*:?\s*/i, '') || paras[li + 1]);
+  const title = (paras[0].match(/(?:project,?\s+(?:an?|the)\s+)(.+?)(?:\s+(?:app|application)?\s*deployed|\.|,)/i) || [])[1];
+  set('title', title);
+  window.scrollTo({ top: f.offsetTop - 80, behavior: 'smooth' });
+};
+</script>
+{% endblock %}

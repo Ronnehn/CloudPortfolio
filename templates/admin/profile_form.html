@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}Profile · {{ profile.name }}{% endblock %}
+{% block content %}
+<div class="wrap admin narrow" style="max-width:900px">
+  <a href="/admin" style="color:var(--muted)">← Dashboard</a>
+  <h1 style="font-size:2.2rem">Profile &amp; resume</h1>
+  {% if request.query_params.get('saved') %}<p class="notice">Saved. <a href="/about">View your About page →</a></p>{% endif %}
+
+  <form class="form" method="post" action="/admin/profile" enctype="multipart/form-data">
+    <div class="panel">
+      <h2>Who you are</h2>
+      <div class="cols-2">
+        <div class="field"><label>Name</label><input type="text" name="name" value="{{ profile.name or '' }}"></div>
+        <div class="field"><label>Headline</label><input type="text" name="headline" value="{{ profile.headline or '' }}" placeholder="Cloud & DevOps Engineer · AWS"></div>
+      </div>
+      <div class="field"><label>Homepage intro</label><span class="hint">The line under your name on the homepage.</span>
+        <textarea name="intro" rows="2">{{ profile.intro or '' }}</textarea></div>
+      <div class="field"><label>About me</label><span class="hint">Markdown works. Shown on the homepage and the About page.</span>
+        <textarea name="about_md" rows="9">{{ profile.about_md or '' }}</textarea></div>
+      <div class="field"><label>Photo</label>
+        {% if profile.photo_id %}<img src="/files/{{ profile.photo_id }}" class="avatar lg"><label class="check"><input type="checkbox" name="remove_photo"> Remove photo</label>{% endif %}
+        <input type="file" name="photo" accept="image/*"></div>
+    </div>
+
+    <div class="panel">
+      <h2>Resume</h2>
+      <div class="field"><span class="hint">PDF, max 8 MB. Visitors can view it on the About page and download it at <code>/resume</code>.</span>
+        {% if profile.resume_id %}<p><a class="btn sm" href="/resume" target="_blank">📄 Current resume</a></p>
+        <label class="check"><input type="checkbox" name="remove_resume"> Remove resume</label>{% endif %}
+        <input type="file" name="resume" accept="application/pdf"></div>
+      <div class="field"><label>Skills &amp; tools</label><span class="hint">Comma separated</span>
+        <input type="text" name="skills" value="{{ profile.skills or '' }}"></div>
+      <div class="field"><label>Certifications</label><span class="hint">One per line, e.g. AWS Certified Solutions Architect – Associate (2026)</span>
+        <textarea name="certifications" rows="4">{{ profile.certifications or '' }}</textarea></div>
+    </div>
+
+    <div class="panel">
+      <h2>Homepage extras</h2>
+      <div class="field"><label>Callout</label><span class="hint">Highlighted note under the intro, e.g. what you're working on or that you're open to work.</span>
+        <textarea name="callout" rows="2">{{ profile.callout or '' }}</textarea></div>
+      <div class="field"><label>Pillars</label><span class="hint">The strip under your intro, one per line as <code>Word | rest</code>. Icons are picked for Secure, Scalable, Reliable and Focused.</span>
+        <textarea name="pillars" rows="4" class="code">{{ profile.pillars or '' }}</textarea></div>
+      <div class="field"><label>Personal statement (quote block)</label>
+        <textarea name="quote" rows="3">{{ profile.quote or '' }}</textarea></div>
+    </div>
+
+    <div class="panel">
+      <h2>Contact links</h2>
+      <div class="cols-2">
+        <div class="field"><label>Email</label><input type="email" name="email" value="{{ profile.email or '' }}"></div>
+        <div class="field"><label>Location</label><input type="text" name="location" value="{{ profile.location or '' }}" placeholder="Netherlands"></div>
+        <div class="field"><label>LinkedIn URL</label><input type="url" name="linkedin" value="{{ profile.linkedin or '' }}"></div>
+        <div class="field"><label>GitHub URL</label><input type="url" name="github" value="{{ profile.github or '' }}"></div>
+      </div>
+    </div>
+
+    <div class="savebar"><button class="btn primary" type="submit">Save profile</button><a class="btn" href="/admin" style="margin-left:auto">Cancel</a></div>
+  </form>
+</div>
+{% endblock %}

@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+{% import "_pillars.html" as pillars %}
+{% block content %}
+<div class="wrap">
+  <section class="hero">
+    <div class="eyebrow">{{ profile.headline }}</div>
+    <h1>{{ profile.name }}</h1>
+    <p class="lead">{{ profile.intro }}</p>
+
+    {% if featured %}
+    <div class="chips">
+      <span class="label">Featured:</span>
+      {% for p in featured %}<a class="chip" href="/projects/{{ p.slug }}">{{ p.title }}</a>{% endfor %}
+      {% if profile.resume_id %}<a class="chip" href="/resume" target="_blank" rel="noopener">📄 Resume</a>{% endif %}
+    </div>
+    {% endif %}
+
+    {% if profile.callout %}
+    <div class="callout">
+      <p>{{ profile.callout }}</p>
+      <div class="sig">— <strong>{{ profile.name }}</strong></div>
+    </div>
+    {% endif %}
+
+    {{ pillars.strip(profile.pillars) }}
+  </section>
+
+  <section class="block" id="projects">
+    <div class="section-head">
+      <div>
+        <h2>Projects</h2>
+        <p>What I built, why, and how: architecture, steps and lessons learned.</p>
+      </div>
+    </div>
+
+    {% if all_tags %}
+    <div class="chips" id="filters" style="margin:0 0 20px">
+      <button class="chip on" data-tag="">All</button>
+      {% for t in all_tags %}<button class="chip" data-tag="{{ t|lower }}">#{{ t }}</button>{% endfor %}
+    </div>
+    {% endif %}
+
+    {% if projects %}
+    <div class="grid" id="project-grid">
+      {% for p in projects %}
+      {% set ptags = p.tags|tags %}
+      <a class="card" href="/projects/{{ p.slug }}" data-tags="{{ ptags|join(',')|lower }}">
+        {% if p.cover_id %}<img class="cover" src="/files/{{ p.cover_id }}" alt="" loading="lazy">
+        {% else %}<div class="cover placeholder">{{ p.title[0] }}</div>{% endif %}
+        <div class="body">
+          {% if p.featured %}<span class="star">★ Featured</span>{% endif %}
+          <h3>{{ p.title }}</h3>
+          <p class="hook">{{ p.hook }}</p>
+          <div class="tags">{% for t in ptags[:6] %}<span class="chip small">#{{ t }}</span>{% endfor %}</div>
+        </div>
+      </a>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty">No projects published yet.{% if is_admin %} <a href="/admin/projects/new">Add your first one →</a>{% endif %}</div>
+    {% endif %}
+  </section>
+
+  <section class="block">
+    <div class="about-teaser">
+      {% if profile.photo_id %}<img class="avatar lg" src="/files/{{ profile.photo_id }}" alt="{{ profile.name }}">
+      {% else %}<div class="avatar lg">{{ (profile.name or '?')[0] }}</div>{% endif %}
+      <div>
+        <h2>About me</h2>
+        <div class="prose">{{ profile.about_md|md }}</div>
+        <div class="btns">
+          <a class="btn primary" href="/about">More about me</a>
+          {% if profile.resume_id %}<a class="btn" href="/resume" target="_blank" rel="noopener">📄 Download resume</a>{% endif %}
+          {% if profile.linkedin %}<a class="btn" href="{{ profile.linkedin }}" target="_blank" rel="noopener">LinkedIn</a>{% endif %}
+        </div>
+      </div>
+    </div>
+  </section>
+
+  {% if profile.quote %}
+  <section class="block">
+    <div class="quote">
+      <blockquote>{{ profile.quote }}</blockquote>
+      <div class="identity" style="margin-top:22px">
+        {% if profile.photo_id %}<img class="avatar" src="/files/{{ profile.photo_id }}" alt="">{% else %}<div class="avatar">{{ (profile.name or '?')[0] }}</div>{% endif %}
+        <div><strong>{{ profile.name }}</strong><br><span style="color:var(--muted)">{{ profile.headline }}</span></div>
+      </div>
+    </div>
+  </section>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const filters = document.getElementById('filters');
+  if (filters) filters.addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    filters.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
+    const tag = b.dataset.tag;
+    document.querySelectorAll('#project-grid .card').forEach(c => {
+      c.style.display = !tag || c.dataset.tags.split(',').includes(tag) ? '' : 'none';
+    });
+  });
+</script>
+{% endblock %}

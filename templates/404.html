@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}Not found · {{ profile.name }}{% endblock %}
+{% block content %}
+<div class="wrap narrow" style="padding:100px 20px;text-align:center">
+  <div class="eyebrow">404</div>
+  <h1>This page isn't deployed.</h1>
+  <p style="color:var(--muted)">The project may be unpublished or the link is wrong.</p>
+  <a class="btn primary" href="/">Back to projects</a>
+</div>
+{% endblock %}

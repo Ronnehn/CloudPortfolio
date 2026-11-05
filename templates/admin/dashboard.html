@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Dashboard · {{ profile.name }}{% endblock %}
+{% block content %}
+<div class="wrap admin">
+  <div class="section-head">
+    <div><h1 style="font-size:2.2rem;margin:0">Dashboard</h1><p>Your projects. Drafts are only visible to you while logged in.</p></div>
+    <div class="btns" style="margin:0">
+      <a class="btn" href="/admin/profile">Profile &amp; resume</a>
+      <a class="btn primary" href="/admin/projects/new">+ New project</a>
+    </div>
+  </div>
+
+  {% if projects %}
+  <table class="table">
+    <thead><tr><th>Project</th><th>Status</th><th class="hide-sm">Order</th><th class="hide-sm">Updated</th><th></th></tr></thead>
+    <tbody>
+    {% for p in projects %}
+    <tr>
+      <td><strong>{{ p.title }}</strong>{% if p.featured %} <span style="color:var(--accent)">★</span>{% endif %}<br>
+        <span style="color:var(--muted);font-size:.88rem">/projects/{{ p.slug }}</span></td>
+      <td><span class="status {{ 'live' if p.published else 'draft' }}">{{ 'Live' if p.published else 'Draft' }}</span></td>
+      <td class="hide-sm">{{ p.position }}</td>
+      <td class="hide-sm" style="color:var(--muted);font-size:.88rem">{{ (p.updated_at or '')[:16] }}</td>
+      <td><div class="row-actions">
+        <a class="btn sm" href="/admin/projects/{{ p.id }}">Edit</a>
+        <a class="btn sm" href="/projects/{{ p.slug }}">View</a>
+        <form method="post" action="/admin/projects/{{ p.id }}/toggle"><button class="btn sm">{{ 'Unpublish' if p.published else 'Publish' }}</button></form>
+        <form method="post" action="/admin/projects/{{ p.id }}/delete" onsubmit="return confirm('Delete “{{ p.title }}” permanently?')"><button class="btn sm danger">Delete</button></form>
+      </div></td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="empty">No projects yet. <a href="/admin/projects/new">Create your first one →</a></div>
+  {% endif %}
+</div>
+{% endblock %}

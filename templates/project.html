@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% block title %}{{ p.title }} · {{ profile.name }}{% endblock %}
+{% block description %}{{ p.hook }}{% endblock %}
+{% block content %}
+{% set goals = p.goals|lines %}
+{% set apps = p.applications|apps %}
+{% set embed = video_embed(p.video_url) %}
+{% set sections = [] %}
+{% if p.objective %}{% set _ = sections.append(('objective', 'Objective')) %}{% endif %}
+{% if goals %}{% set _ = sections.append(('goals', 'Project goals')) %}{% endif %}
+{% if apps %}{% set _ = sections.append(('applications', 'Applications used')) %}{% endif %}
+{% if diagrams or p.mermaid %}{% set _ = sections.append(('diagrams', 'Architecture & diagrams')) %}{% endif %}
+{% if steps %}{% set _ = sections.append(('steps', 'Steps')) %}{% endif %}
+{% if p.video_url %}{% set _ = sections.append(('demo', 'Demo')) %}{% endif %}
+{% if p.learned %}{% set _ = sections.append(('learned', 'What I learned')) %}{% endif %}
+{% macro num(key) %}{% for s in sections %}{% if s[0] == key %}{{ '%02d'|format(loop.index) }}{% endif %}{% endfor %}{% endmacro %}
+
+<div class="wrap">
+  <section class="project-hero">
+    <a href="/#projects" style="color:var(--muted)">← All projects</a>
+    {% if not p.published %}<p><span class="draft-flag">Draft: only you can see this page</span></p>{% endif %}
+    <h1>{{ p.title }}</h1>
+    {% if p.hook %}<p class="hook">{{ p.hook }}</p>{% endif %}
+    <div class="meta">
+      {% if p.video_url %}<a class="btn primary" href="{{ '#demo' if embed else p.video_url }}" {% if not embed %}target="_blank" rel="noopener"{% endif %}>▶ Watch the demo</a>{% endif %}
+      {% if p.github_url %}<a class="btn" href="{{ p.github_url }}" target="_blank" rel="noopener">GitHub repo</a>{% endif %}
+      {% if is_admin %}<a class="btn" href="/admin/projects/{{ p.id }}">✎ Edit</a>{% endif %}
+    </div>
+    <div class="chips">{% for t in p.tags|tags %}<span class="chip small">#{{ t }}</span>{% endfor %}</div>
+    {% if p.cover_id %}<img class="hero-cover" src="/files/{{ p.cover_id }}" alt="">{% endif %}
+  </section>
+
+  <div class="layout">
+    <aside class="toc">
+      <div class="tlabel">On this page</div>
+      {% for key, label in sections %}<a href="#{{ key }}">{{ label }}</a>{% endfor %}
+    </aside>
+
+    <div class="content">
+      {% if p.objective %}
+      <section id="objective"><h2><span class="num">{{ num('objective') }}</span>Objective</h2>
+        <div class="prose">{{ p.objective|md }}</div></section>
+      {% endif %}
+
+      {% if goals %}
+      <section id="goals"><h2><span class="num">{{ num('goals') }}</span>Project goals</h2>
+        <ul class="goals">{% for g in goals %}<li>{{ g }}</li>{% endfor %}</ul></section>
+      {% endif %}
+
+      {% if apps %}
+      <section id="applications"><h2><span class="num">{{ num('applications') }}</span>Applications used</h2>
+        <div class="apps">{% for a in apps %}<div class="app"><strong>{{ a.name }}</strong>{% if a.why %}<span>{{ a.why }}</span>{% endif %}</div>{% endfor %}</div></section>
+      {% endif %}
+
+      {% if diagrams or p.mermaid %}
+      <section id="diagrams"><h2><span class="num">{{ num('diagrams') }}</span>Architecture &amp; diagrams</h2>
+        {% if p.mermaid %}<div class="mermaid-box"><pre class="mermaid">{{ p.mermaid }}</pre></div>{% endif %}
+        {% for d in diagrams %}
+        <figure class="diagram"><img src="/files/{{ d.file_id }}" alt="{{ d.caption }}" loading="lazy" data-zoom>
+          {% if d.caption %}<figcaption>{{ d.caption }}</figcaption>{% endif %}</figure>
+        {% endfor %}
+      </section>
+      {% endif %}
+
+      {% if steps %}
+      <section id="steps"><h2><span class="num">{{ num('steps') }}</span>Steps</h2>
+        <ol class="steps">{% for s in steps %}<li><h3>{{ s.title }}</h3><div class="prose">{{ s.body|md }}</div></li>{% endfor %}</ol></section>
+      {% endif %}
+
+      {% if p.video_url %}
+      <section id="demo"><h2><span class="num">{{ num('demo') }}</span>Demo</h2>
+        {% if embed %}<iframe class="video" src="{{ embed }}" allowfullscreen loading="lazy" title="Demo video"></iframe>
+        {% else %}<a class="btn primary" href="{{ p.video_url }}" target="_blank" rel="noopener">▶ Watch the full walkthrough</a>{% endif %}
+      </section>
+      {% endif %}
+
+      {% if p.learned %}
+      <section id="learned"><h2><span class="num">{{ num('learned') }}</span>What I learned</h2>
+        <div class="callout"><div class="prose">{{ p.learned|md }}</div><div class="sig">— <strong>{{ profile.name }}</strong></div></div></section>
+      {% endif %}
+
+      {% if others %}
+      <section><h2>More projects</h2>
+        <div class="more">{% for o in others %}<a class="card" href="/projects/{{ o.slug }}"><div class="body"><h3>{{ o.title }}</h3><p class="hook">{{ o.hook }}</p></div></a>{% endfor %}</div></section>
+      {% endif %}
+    </div>
+  </div>
+</div>
+<div class="lightbox" id="lightbox"><img alt=""></div>
+{% endblock %}
+
+{% block scripts %}
+{% if p.mermaid %}
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+  mermaid.initialize({ startOnLoad: true, theme: 'default' });
+</script>
+{% endif %}
+<script>
+  const lb = document.getElementById('lightbox');
+  document.querySelectorAll('[data-zoom]').forEach(img => img.addEventListener('click', () => {
+    lb.querySelector('img').src = img.src; lb.classList.add('open');
+  }));
+  lb.addEventListener('click', () => lb.classList.remove('open'));
+  // highlight current section in the side menu
+  const links = [...document.querySelectorAll('.toc a')];
+  const obs = new IntersectionObserver(entries => entries.forEach(en => {
+    if (en.isIntersecting) links.forEach(l => l.classList.toggle('active', l.hash === '#' + en.target.id));
+  }), { rootMargin: '-30% 0px -60% 0px' });
+  document.querySelectorAll('.content > section[id]').forEach(s => obs.observe(s));
+</script>
+{% endblock %}
